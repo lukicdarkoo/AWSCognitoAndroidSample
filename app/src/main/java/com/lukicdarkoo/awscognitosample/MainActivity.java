@@ -5,27 +5,32 @@ import android.os.Bundle;
 import android.util.Log;
 
 import com.amazonaws.ClientConfiguration;
+import com.amazonaws.mobileconnectors.cognitoidentityprovider.CognitoDevice;
 import com.amazonaws.mobileconnectors.cognitoidentityprovider.CognitoUser;
 import com.amazonaws.mobileconnectors.cognitoidentityprovider.CognitoUserAttributes;
 import com.amazonaws.mobileconnectors.cognitoidentityprovider.CognitoUserCodeDeliveryDetails;
+import com.amazonaws.mobileconnectors.cognitoidentityprovider.CognitoUserDetails;
 import com.amazonaws.mobileconnectors.cognitoidentityprovider.CognitoUserPool;
 import com.amazonaws.mobileconnectors.cognitoidentityprovider.CognitoUserSession;
 import com.amazonaws.mobileconnectors.cognitoidentityprovider.continuations.AuthenticationContinuation;
 import com.amazonaws.mobileconnectors.cognitoidentityprovider.continuations.AuthenticationDetails;
+import com.amazonaws.mobileconnectors.cognitoidentityprovider.continuations.ChallengeContinuation;
 import com.amazonaws.mobileconnectors.cognitoidentityprovider.continuations.MultiFactorAuthenticationContinuation;
 import com.amazonaws.mobileconnectors.cognitoidentityprovider.handlers.AuthenticationHandler;
+import com.amazonaws.mobileconnectors.cognitoidentityprovider.handlers.GetDetailsHandler;
 import com.amazonaws.mobileconnectors.cognitoidentityprovider.handlers.SignUpHandler;
+
+import java.util.HashMap;
 
 public class MainActivity extends AppCompatActivity {
     public static final String TAG = "MainActivity";
 
-    public static final String AMAZON_COGNITO_IDENTITY_POOL_ID =
-            "us-east-1:55399e2c-dff5-45b7-9552-27d1631bfd1f";
+    public static final String AMAZON_COGNITO_IDENTITY_POOL_ID = "us-east-1_lasSptmFt";
 
     // `User Pools` is consider as an another Authentication providers for `Federated Identities`
     // therefor we need to create new User Pools and connect it with the Federated Identities
-    public static final String CLIENT_ID = "432e9lom3sfgn1va4d8nnk6koi";
-    public static final String CLIENT_SECRET = "10i39rpaet784jdf42d6i29dqe7f3j7gkqhrhecnlivb8s8d5n15";
+    public static final String CLIENT_ID = "1p040bq59amt2podihlpg831e";
+    public static final String CLIENT_SECRET = "1f7v118jsrh156nek2ui685rt29gmijuto09j0q36qh8kjtsqsit";
 
 
     // Our imaginary user
@@ -39,25 +44,43 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         AWSTestAuthentication();
+        //AWSTestSignup();
     }
 
     private void AWSTestAuthentication() {
         Log.e(TAG, "AWSTestAuthentication() - Start");
 
         CognitoUserPool userPool = new CognitoUserPool(this, AMAZON_COGNITO_IDENTITY_POOL_ID, CLIENT_ID, CLIENT_SECRET, new ClientConfiguration());
-        CognitoUser cognitoUser = userPool.getUser("lukicdarkoo");
+        final CognitoUser cognitoUser = userPool.getUser(USERNAME);
+
+
+        final GetDetailsHandler detailsHandler = new GetDetailsHandler() {
+            @Override
+            public void onSuccess(CognitoUserDetails cognitoUserDetails) {
+                CognitoUserAttributes cognitoUserAttributes = cognitoUserDetails.getAttributes();
+                HashMap<String, String> hashMap = (HashMap<String, String>) cognitoUserAttributes.getAttributes();
+                Log.d(TAG, hashMap.get("email"));
+            }
+
+            @Override
+            public void onFailure(Exception exception) {
+
+            }
+        };
 
         // Callback handler for the sign-in process
-        AuthenticationHandler authenticationHandler = new AuthenticationHandler() {
+        final AuthenticationHandler authenticationHandler = new AuthenticationHandler() {
             @Override
-            public void onSuccess(CognitoUserSession cognitoUserSession) {
-                Log.e(TAG, "AWSTestAuthentication() - Success");
+            public void onSuccess(CognitoUserSession userSession, CognitoDevice newDevice) {
+                Log.d(TAG, "Authentication success");
+
+                cognitoUser.getDetailsInBackground(detailsHandler);
             }
 
             @Override
             public void getAuthenticationDetails(AuthenticationContinuation authenticationContinuation, String userId) {
                 // The API needs user sign-in credentials to continue
-                AuthenticationDetails authenticationDetails = new AuthenticationDetails(USERNAME, PASSWORD, null);
+                AuthenticationDetails authenticationDetails = new AuthenticationDetails(userId, PASSWORD, null);
 
                 // Pass the user sign-in credentials to the continuation
                 authenticationContinuation.setAuthenticationDetails(authenticationDetails);
@@ -69,6 +92,11 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void getMFACode(final MultiFactorAuthenticationContinuation continuation) {
                 continuation.continueTask();
+            }
+
+            @Override
+            public void authenticationChallenge(ChallengeContinuation continuation) {
+
             }
 
             @Override
@@ -110,7 +138,7 @@ public class MainActivity extends AppCompatActivity {
 
         // http://docs.aws.amazon.com/AWSAndroidSDK/latest/javadoc/com/amazonaws/mobileconnectors/cognitoidentityprovider/CognitoUserPool.html
         CognitoUserPool userPool = new CognitoUserPool(this, AMAZON_COGNITO_IDENTITY_POOL_ID, CLIENT_ID, CLIENT_SECRET, clientConfiguration);
-        userPool.signUpInBackground(USERNAME, EMAIL, userAttributes, null, signupCallback);
+        userPool.signUpInBackground(USERNAME, PASSWORD, userAttributes, null, signupCallback);
 
         Log.e(TAG, "AWSTestSignup() - Finished");
     }
