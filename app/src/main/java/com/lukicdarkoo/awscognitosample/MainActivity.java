@@ -36,7 +36,7 @@ import java.util.Map;
 public class MainActivity extends AppCompatActivity {
     public static final String TAG = "MainActivity";
 
-    public static final String AMAZON_COGNITO_IDENTITY_POOL_ID = "us-east-1:55399e2c-dff5-45b7-9552-27d1631bfd1f";
+    public static final String AMAZON_COGNITO_IDENTITY_POOL_ID = "us-east-1:d5bfa041-0f69-44c7-b4cf-a9e0e7d08733";
     public static final String AMAZON_COGNITO_USER_POOL_ID = "us-east-1_lasSptmFt";
     public static final Regions REGION = Regions.US_EAST_1;
 
@@ -47,9 +47,9 @@ public class MainActivity extends AppCompatActivity {
 
 
     // Our imaginary user
-    public static final String USERNAME = "awsuser2";
-    public static final String PASSWORD = "awspassword2";
-    public static final String EMAIL = "aws2@email.com";
+    public static final String USERNAME = "awsuser";
+    public static final String PASSWORD = "awspassword";
+    public static final String EMAIL = "aws@email.com";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -61,21 +61,24 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
+    private String getLoginKey() {
+        return "cognito-idp." + REGION.toString().toLowerCase().replace('_', '-') + ".amazonaws.com/" + AMAZON_COGNITO_USER_POOL_ID;
+    }
+
     // http://docs.aws.amazon.com/cognito/latest/developerguide/synchronizing-data.html
     private void AWSTestSync(String token) {
         Log.d(TAG, "AWSTestSync() - Start");
 
-        CognitoCachingCredentialsProvider credentialsProvider = new CognitoCachingCredentialsProvider(
-            this,
-            AMAZON_COGNITO_IDENTITY_POOL_ID,
-            REGION);
+        CognitoCachingCredentialsProvider credentialsProvider = new CognitoCachingCredentialsProvider(this, AMAZON_COGNITO_IDENTITY_POOL_ID, REGION);
+
 
         // We want to associate Cognito Sync data with user in User Pool
         // http://docs.aws.amazon.com/cognito/latest/developerguide/amazon-cognito-integrating-user-pools-with-identity-pools.html
         Map<String, String> logins = new HashMap<String, String>();
-        logins.put("cognito-idp." + REGION.toString() + ".amazonaws.com/" + AMAZON_COGNITO_USER_POOL_ID, token);
-        credentialsProvider.setLogins(logins);
+        logins.put(getLoginKey(), token);
+        credentialsProvider.withLogins(logins);
 
+        Log.d(TAG, "Login key: " + getLoginKey());
 
         // Let's use Cognito Sync
         CognitoSyncManager client = new CognitoSyncManager(
@@ -117,7 +120,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void AWSTestAuthentication() {
-        Log.e(TAG, "AWSTestAuthentication() - Start");
+        Log.d(TAG, "AWSTestAuthentication() - Start");
 
         CognitoUserPool userPool = new CognitoUserPool(this, AMAZON_COGNITO_USER_POOL_ID, CLIENT_ID, CLIENT_SECRET, new ClientConfiguration());
         final CognitoUser cognitoUser = userPool.getUser(USERNAME);
@@ -130,7 +133,7 @@ public class MainActivity extends AppCompatActivity {
                 Log.d(TAG, "Authentication success");
 
                 // Test Cognito Sync
-                AWSTestSync(userSession.getAccessToken().getJWTToken());
+                AWSTestSync(userSession.getIdToken().getJWTToken());
             }
 
             @Override
@@ -164,7 +167,7 @@ public class MainActivity extends AppCompatActivity {
         // Sign-in the user
         cognitoUser.getSessionInBackground(authenticationHandler);
 
-        Log.e(TAG, "AWSTestAuthentication() - End");
+        Log.d(TAG, "AWSTestAuthentication() - End");
     }
 
 
